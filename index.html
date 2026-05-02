@@ -54,12 +54,6 @@
       padding-bottom: 6px;
       border-bottom: 1px solid #b3e5fc;
     }
-    #pp-type {
-      color: #17928a;
-      font-size: 11px;
-      font-style: italic;
-      margin-bottom: 8px;
-    }
     #pb {
       color: #444;
       font-size: 12px;
@@ -292,7 +286,6 @@
     <img id="pp-img" src="" alt="" class="hidden">
     <div id="popup-body">
       <h3 id="pt"></h3>
-      <p id="pp-type"></p>
       <p id="pb"></p>
       <p id="pp-spatial"></p>
     </div>
@@ -804,7 +797,7 @@ function render() {
       activeNearestLandmark = nearest;
       const info = nearest.info;
       ptEl.textContent        = info.name;
-      ppTypeEl.textContent    = info.type  || '';
+      ppTypeEl.textContent    = '';
       pbEl.textContent        = info.desc  || '';
       ppSpatialEl.textContent = info.spatial || '';
       if (info.img) {
