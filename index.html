@@ -781,10 +781,23 @@ function render() {
     }
     popupEl.classList.add('show');
 
-    let px = screenSx + 44, py = screenSy - CHAR_H * ZOOM - 20;
-    if (px + 310 > vw) px = screenSx - 298;
-    popupEl.style.left = Math.max(8, px) + 'px';
-    popupEl.style.top  = Math.max(8, Math.min(vh - 200, py)) + 'px';
+    const PW = popupEl.offsetWidth  || 290;
+    const PH = popupEl.offsetHeight || 320;
+    const M  = 8; // margin from screen edge
+
+    // Prefer right of character; flip left if it would overflow
+    let px = screenSx + 44;
+    if (px + PW + M > vw) px = screenSx - PW - 12;
+
+    // Prefer above character; drop below if it would overflow top
+    let py = screenSy - CHAR_H * ZOOM - PH - 10;
+
+    // Clamp all four edges
+    px = Math.max(M, Math.min(vw - PW - M, px));
+    py = Math.max(M, Math.min(vh - PH - M, py));
+
+    popupEl.style.left = px + 'px';
+    popupEl.style.top  = py + 'px';
   } else {
     activeNearestLandmark = null;
     popupEl.classList.remove('show');
