@@ -65,7 +65,7 @@ http.createServer((req, res) => {
   }
 
   // Serve static files
-  const filePath = path.join(__dirname, urlPath === '/' ? 'index.html' : urlPath);
+  const filePath = path.join(__dirname, decodeURIComponent(urlPath === '/' ? 'index.html' : urlPath));
   const ext = path.extname(filePath);
 
   fs.readFile(filePath, (err, data) => {
