@@ -449,11 +449,11 @@ function render() {
 
     const nearness = Math.max(0, 1 - dist / (GLOW_DIST * 2));
     const sx = lm.x - cam.x, sy = lm.y - cam.y;
-    const outerR = lm.r * 3 + pulse * 10;
+    const outerR = lm.r * 1.5 + pulse * 5;
 
-    const grad = ctx.createRadialGradient(sx, sy, lm.r * 0.2, sx, sy, outerR);
-    grad.addColorStop(0, `rgba(64, 224, 208, ${(0.6 + pulse * 0.35) * nearness})`);
-    grad.addColorStop(0.5, `rgba(100, 230, 218, ${0.3 * nearness})`);
+    const grad = ctx.createRadialGradient(sx, sy, lm.r * 0.1, sx, sy, outerR);
+    grad.addColorStop(0, `rgba(64, 224, 208, ${(0.95 + pulse * 0.05) * nearness})`);
+    grad.addColorStop(0.5, `rgba(100, 230, 218, ${0.75 * nearness})`);
     grad.addColorStop(1,   'rgba(64, 224, 208, 0)');
 
     ctx.fillStyle = grad;
