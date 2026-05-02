@@ -279,7 +279,7 @@
       <h3 id="pt"></h3>
       <p id="pb"></p>
     </div>
-    <div id="pp-enter-hint">↵ Enter to enlarge photo</div>
+    <div id="pp-enter-hint">Ctrl to enlarge photo</div>
   </div>
   <div id="hint">Arrow keys to walk &nbsp;·&nbsp; Explore the landmarks</div>
 </div>
@@ -288,7 +288,7 @@
 <div id="lightbox">
   <img id="lb-img" src="" alt="">
   <p id="lb-caption"></p>
-  <p id="lb-hint">Press Enter or click to close</p>
+  <p id="lb-hint">Press Ctrl or click to close</p>
 </div>
 
 <!-- Chatbot -->
@@ -654,7 +654,8 @@ function closeLightbox() {
 }
 
 window.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
+  if (e.key === 'Control') {
+    e.preventDefault();
     if (lightboxOpen) {
       closeLightbox();
     } else if (activeNearestLandmark && activeNearestLandmark.info.img) {
