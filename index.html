@@ -79,9 +79,9 @@
     #chat-btn {
       position: fixed;
       bottom: 24px; left: 24px;
-      background: rgba(13, 17, 23, 0.82);
-      color: #40E0D0;
-      border: 1.5px solid #40E0D0;
+      background: #17928a;
+      color: #fff;
+      border: none;
       border-radius: 24px;
       padding: 10px 18px;
       font-family: Georgia, serif;
@@ -91,10 +91,11 @@
       backdrop-filter: blur(4px);
       transition: background 0.2s, box-shadow 0.2s;
       letter-spacing: 0.3px;
+      box-shadow: 0 2px 10px rgba(23, 146, 138, 0.4);
     }
     #chat-btn:hover {
-      background: rgba(64, 224, 208, 0.15);
-      box-shadow: 0 0 14px rgba(64, 224, 208, 0.35);
+      background: #0f7a73;
+      box-shadow: 0 4px 16px rgba(23, 146, 138, 0.55);
     }
 
     #chat-panel {
@@ -102,7 +103,7 @@
       bottom: 72px; left: 24px;
       width: 340px; height: 450px;
       background: rgba(255, 255, 255, 0.98);
-      border: 2px solid #40E0D0;
+      border: 2px solid #17928a;
       border-radius: 14px;
       display: flex; flex-direction: column;
       box-shadow: 0 8px 32px rgba(0,0,0,0.28);
@@ -118,7 +119,7 @@
     }
 
     #chat-header {
-      background: #40E0D0;
+      background: #17928a;
       padding: 12px 14px;
       display: flex; justify-content: space-between; align-items: center;
       flex-shrink: 0;
@@ -126,12 +127,12 @@
     #chat-header span {
       font-family: Georgia, serif;
       font-size: 14px; font-weight: bold;
-      color: #0d1117; letter-spacing: 0.2px;
+      color: #fff; letter-spacing: 0.2px;
     }
     #chat-close {
       background: none; border: none; cursor: pointer;
-      font-size: 17px; color: #0d1117; line-height: 1;
-      padding: 0 2px; opacity: 0.7;
+      font-size: 17px; color: #fff; line-height: 1;
+      padding: 0 2px; opacity: 0.75;
     }
     #chat-close:hover { opacity: 1; }
 
@@ -153,11 +154,18 @@
     }
     .msg.bot {
       background: #f0fdfc;
-      border: 1px solid #b2f0ea;
+      border: 1px solid #a8dbd8;
       align-self: flex-start;
       color: #1a1a2e;
       border-radius: 10px 10px 10px 2px;
     }
+    .msg.bot ul {
+      margin: 6px 0 2px 0;
+      padding-left: 18px;
+    }
+    .msg.bot li { margin-bottom: 3px; }
+    .msg.bot p { margin-bottom: 6px; }
+    .msg.bot p:last-child { margin-bottom: 0; }
     .msg.user {
       background: #0d1117;
       color: #fff;
@@ -184,18 +192,18 @@
       resize: none;
       background: #fff;
     }
-    #chat-input:focus { border-color: #40E0D0; }
+    #chat-input:focus { border-color: #17928a; }
     #chat-send {
-      background: #40E0D0;
+      background: #17928a;
       border: none; border-radius: 8px;
       padding: 8px 14px;
       font-family: Georgia, serif;
       font-size: 13px; font-weight: bold;
-      cursor: pointer; color: #0d1117;
+      cursor: pointer; color: #fff;
       transition: background 0.2s;
       flex-shrink: 0;
     }
-    #chat-send:hover  { background: #2bc8b8; }
+    #chat-send:hover  { background: #0f7a73; }
     #chat-send:disabled { background: #ccc; cursor: default; }
   </style>
 </head>
@@ -589,9 +597,9 @@ function render() {
     const outerR = lm.r * 1.0 + pulse * 3;
 
     const grad = ctx.createRadialGradient(sx, sy, lm.r * 0.1, sx, sy, outerR);
-    grad.addColorStop(0, `rgba(64, 224, 208, ${(0.5 + pulse * 0.1) * nearness})`);
-    grad.addColorStop(0.5, `rgba(100, 230, 218, ${0.25 * nearness})`);
-    grad.addColorStop(1,   'rgba(64, 224, 208, 0)');
+    grad.addColorStop(0, `rgba(23, 146, 138, ${(0.5 + pulse * 0.1) * nearness})`);
+    grad.addColorStop(0.5, `rgba(23, 146, 138, ${0.25 * nearness})`);
+    grad.addColorStop(1,   'rgba(23, 146, 138, 0)');
 
     ctx.fillStyle = grad;
     ctx.beginPath();
@@ -660,16 +668,43 @@ init();
     panel.classList.toggle('open', open);
     if (open) {
       if (msgsEl.children.length === 0) {
-        addMsg('bot', 'Hello! I\'m The Commoning Bot. Ask me anything about France Colony, Islamabad — its history, its people, or the thesis behind this map.');
+        addMsg('bot', 'Hey there! I\'m The Commoning Bot — here to guide you through this interactive map tour of France Colony, Islamabad, and the thesis behind it.\n\nI\'m ready to answer your questions about:\n- **The place**: What France Colony is, where it is, who lives there\n- **The history**: How it came to exist and why it\'s been invisible for 50 years\n- **The people**: The real residents and actors shaping life here\n- **The politics**: How systems of invisibility actually work\n- **The design proposal**: How a wall can become an interface instead of a barrier\n\nWhat would you like to know?');
       }
       input.focus();
     }
   }
 
+  function mdToHtml(md) {
+    // Escape HTML first
+    let s = md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    // Bold
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Process lines — collect bullets into <ul> blocks
+    const lines = s.split('\n');
+    const out = [];
+    let inList = false;
+    for (const line of lines) {
+      const bullet = line.match(/^[-•]\s+(.*)/);
+      if (bullet) {
+        if (!inList) { out.push('<ul>'); inList = true; }
+        out.push('<li>' + bullet[1] + '</li>');
+      } else {
+        if (inList) { out.push('</ul>'); inList = false; }
+        out.push(line.trim() ? '<p>' + line + '</p>' : '');
+      }
+    }
+    if (inList) out.push('</ul>');
+    return out.join('');
+  }
+
   function addMsg(role, text, typing) {
     const el = document.createElement('div');
     el.className = 'msg ' + role + (typing ? ' typing' : '');
-    el.textContent = text;
+    if (role === 'bot' && !typing) {
+      el.innerHTML = mdToHtml(text);
+    } else {
+      el.textContent = text;
+    }
     msgsEl.appendChild(el);
     msgsEl.scrollTop = msgsEl.scrollHeight;
     return el;
@@ -694,7 +729,7 @@ init();
       const data = await res.json();
       const reply = data.reply || data.error || 'Something went wrong.';
 
-      typingEl.textContent = reply;
+      typingEl.innerHTML = mdToHtml(reply);
       typingEl.classList.remove('typing');
 
       history.push({ role: 'user', content: text });
