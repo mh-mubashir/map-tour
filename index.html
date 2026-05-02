@@ -114,7 +114,8 @@ const LANDMARKS = [
 // ─────────────────────────────────────────────────────────────
 //  CONFIG
 // ─────────────────────────────────────────────────────────────
-const MAP_SCALE  = 0.25;  // render all images at 25% of original resolution
+const MAP_SCALE    = 0.25;  // logic scale — collision, landmarks, character coords
+const RENDER_SCALE = 0.5;   // visual scale — map rendered at this resolution for sharpness
 const SPEED      = 3;     // character px / frame
 const CHAR_H     = 52;    // character render height in px
 const GLOW_DIST  = 150;   // px: landmark starts glowing
@@ -297,11 +298,16 @@ async function init() {
     mapW = (mImg.naturalWidth  * MAP_SCALE) | 0;
     mapH = (mImg.naturalHeight * MAP_SCALE) | 0;
 
-    // Pre-render scaled map to offscreen canvas
+    // Pre-render map at RENDER_SCALE for sharp visuals
     setProgress(20, 'Rendering map…');
+    const renderW = (mImg.naturalWidth  * RENDER_SCALE) | 0;
+    const renderH = (mImg.naturalHeight * RENDER_SCALE) | 0;
     mapOC = document.createElement('canvas');
-    mapOC.width = mapW; mapOC.height = mapH;
-    mapOC.getContext('2d').drawImage(mImg, 0, 0, mapW, mapH);
+    mapOC.width = renderW; mapOC.height = renderH;
+    const mapRCtx = mapOC.getContext('2d');
+    mapRCtx.imageSmoothingEnabled = true;
+    mapRCtx.imageSmoothingQuality = 'high';
+    mapRCtx.drawImage(mImg, 0, 0, renderW, renderH);
 
     // Read path pixel data for collision
     setProgress(40, 'Reading path…');
@@ -426,8 +432,11 @@ function render() {
   ctx.save();
   ctx.scale(ZOOM, ZOOM);
 
-  // Map — sample sw×sh map pixels, draw into sw×sh pre-transform (= vw×vh on screen)
-  ctx.drawImage(mapOC, cam.x, cam.y, sw, sh, 0, 0, sw, sh);
+  // Map — convert logic coords to render coords (K = RENDER_SCALE / MAP_SCALE)
+  const K = RENDER_SCALE / MAP_SCALE;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(mapOC, cam.x * K, cam.y * K, sw * K, sh * K, 0, 0, sw, sh);
 
   // Path overlay
   ctx.drawImage(pathOverlayOC, cam.x, cam.y, sw, sh, 0, 0, sw, sh);
