@@ -119,6 +119,7 @@ const SPEED      = 3;     // character px / frame
 const CHAR_H     = 65;    // character render height in px
 const GLOW_DIST  = 150;   // px: landmark starts glowing
 const POPUP_DIST = 110;   // px: popup card appears
+const TOLERANCE  = 4;     // px: soft edge — character can stray this far off exact path pixels
 
 // ─────────────────────────────────────────────────────────────
 //  GLOBALS
@@ -172,6 +173,17 @@ function onPath(x, y) {
   const i = (py * mapW + px) * 4;
   const r = pathData[i], g = pathData[i+1], b = pathData[i+2], a = pathData[i+3];
   return a > 50 && r > 160 && g > 60 && b < 160 && r > g + 30 && r > b + 60;
+}
+
+// nearPath — used for movement. Returns true if (x,y) or any of 8 surrounding
+// sample points within TOLERANCE px is on the path, giving a soft edge feel.
+function nearPath(x, y) {
+  if (onPath(x, y)) return true;
+  const T = TOLERANCE;
+  return onPath(x+T, y)   || onPath(x-T, y)   ||
+         onPath(x, y+T)   || onPath(x, y-T)   ||
+         onPath(x+T, y+T) || onPath(x-T, y+T) ||
+         onPath(x+T, y-T) || onPath(x-T, y-T);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -359,9 +371,9 @@ function update() {
 
   if (dx || dy) {
     const nx = char.x + dx, ny = char.y + dy;
-    if      (onPath(nx, ny))       { char.x = nx; char.y = ny; }
-    else if (onPath(nx, char.y))   { char.x = nx; }
-    else if (onPath(char.x, ny))   { char.y = ny; }
+    if      (nearPath(nx, ny))       { char.x = nx; char.y = ny; }
+    else if (nearPath(nx, char.y))   { char.x = nx; }
+    else if (nearPath(char.x, ny))   { char.y = ny; }
   }
 
   // Camera centres on character, clamped to map bounds
