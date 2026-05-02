@@ -443,9 +443,9 @@ function render() {
     const outerR = lm.r * 3 + pulse * 10;
 
     const grad = ctx.createRadialGradient(sx, sy, lm.r * 0.2, sx, sy, outerR);
-    grad.addColorStop(0, `rgba(41, 182, 246, ${(0.6 + pulse * 0.35) * nearness})`);
-    grad.addColorStop(0.5, `rgba(79, 195, 247, ${0.3 * nearness})`);
-    grad.addColorStop(1,   'rgba(41, 182, 246, 0)');
+    grad.addColorStop(0, `rgba(64, 224, 208, ${(0.6 + pulse * 0.35) * nearness})`);
+    grad.addColorStop(0.5, `rgba(100, 230, 218, ${0.3 * nearness})`);
+    grad.addColorStop(1,   'rgba(64, 224, 208, 0)');
 
     ctx.fillStyle = grad;
     ctx.beginPath();
