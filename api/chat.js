@@ -109,6 +109,57 @@ The wall is the primary tool of invisibility. This proposal does not demolish it
 Three interventions. Three interfaces. One argument.
 `;
 
+// ─────────────────────────────────────────────────────────────
+//  LANDMARK CAPTIONS DOCUMENT
+//  Full text of Map_Landmark_Captions.md.pdf
+// ─────────────────────────────────────────────────────────────
+const LANDMARK_CAPTIONS = `
+Map Landmark Captions
+France Colony, Islamabad — Walls of Stigma: Commoning Infrastructures of Erasure
+Cyphanah Arshad Khan | CMU MUD 2025–26
+
+1. CAR MAINTENANCE AREA — Skill Commons / Peer-to-Peer Exchange
+France Colony's mechanics are among Islamabad's most reliable — yet vehicles cannot enter the settlement, and the labor that keeps the city's cars running has no street address, no signage, no formal existence. The wall interface faces both ways: tools and parts stored inside, service rendered at the threshold. The city's dependency on this skill is made visible by placing it exactly at the boundary where it was always happening informally.
+Spatial quality: The opening in the wall becomes a workshop front. The street is the forecourt. The threshold IS the workplace.
+
+2. PROTESTING GIRLS — Collective Action as Commons / Governance by Presence
+In 2004 the wall collapsed and killed a child. The women of France Colony camped at the breach and refused to leave until the government provided electricity. They won. This is the only time the state moved — when the wall broke and the community filled the gap with their bodies. Collectivism here is not a strategy. It is infrastructure.
+Spatial quality: The breach, the opening, the crack — these are not failures of the wall. They are the only negotiating table that has ever worked. The map marks this site as a place where protest became architecture.
+
+3. DRIVERS' REST AREA — Mutual Aid / Labor Recognition Commons
+The drivers, domestic workers, and hired hands who move Islamabad's elite economy spend their working hours waiting outside homes in F-7 in heat that can exceed 40°C. They are essential and invisible. This shaded room on the wall's outer face gives them a place that is neither inside the colony nor on the street — a threshold of dignity. It asks the city to acknowledge the labor it depends on.
+Spatial quality: A deep overhang, benches, cross-ventilation. The room faces the street but belongs to no employer. It is public without being surveilled.
+
+4. CIRCULAR ECONOMY ROOM — Resource Commons / One Man's Trash Is Another's Treasury
+Raw material arrives from F-7 — appliances, clothes, furniture no longer wanted by households whose consumption far exceeds their use. France Colony's residents receive, repair, repurpose, and redistribute. What the map shows as material flow is also a social flow: two communities that the wall was built to separate are made economically legible to each other. The rich neighbor's surplus becomes the foundation of someone else's livelihood.
+Spatial quality: The room opens generously toward the F-7 street — wide enough to receive a donated fridge, calm enough to have an honest negotiation about pay.
+
+5. TAILOR'S WORKSHOP — Skill Commons / Informal Economy Made Legible
+The tailoring skill has always existed here — practiced in homes, passed between women, invisible to the formal economy because there is no address to find it at. This workshop sits deeper in the settlement, away from the wall, because it belongs to the neighborhood first. It does not need the wall to exist. It needs an address and a door number so that Amna's business can be registered, invoiced, and found by the clients who already know her work.
+Spatial quality: Fabric spills into the lane. The workshop is not contained — it occupies the neighborhood as it always has. Formalization here is a light touch: a sign, a postcode, a doorbell.
+
+6. WATER ANALYSIS AND TESTING ROOM — Environmental Stewardship Commons / Ecological Knowledge Shared
+The nullah has no custodian with institutional standing. France Colony residents live closest to it, know it most intimately, and are blamed for its condition — despite having no infrastructure to manage it. This room at the ravine's edge gives them standing. Water quality data collected here travels upward to the CDA for the first time. Downstream citizens — who have been receiving contaminated water without knowing its origin — now have a name for the source and a place to direct demands.
+Spatial quality: A porch that extends over the bank. The water is not behind glass — it is reachable. Testing is tactile. The room is open on the ravine side.
+
+7. CHILDREN PAINTING WALL MURAL / CLAIMING THE TOWN SQUARE — Narrative Commons / Spatial Claiming Through Culture
+France Colony has no designated public space — no park, no square, no place that signals the neighborhood is allowed to celebrate. The wall, which was built to erase, becomes the surface on which the community writes itself back into visibility. Children painting a mural on it are not decorating. They are staking a claim. This is the town square that was never given — taken instead, through color and presence and the ordinary act of children playing in public.
+Spatial quality: The square is informal, sun-dappled, slightly uneven underfoot. The mural faces outward toward F-7. The city sees it whether it wants to or not.
+
+8. KIDS AND THE RECYCLING ROOM / GAMIFICATION OF KNOWLEDGE — Knowledge Commons / Ecological Pedagogy Through Play
+France Colony has no formal waste infrastructure. Trash accumulates in the nullah because there is nowhere else for it to go. This room turns that problem into a game: children bring collected waste and receive toys, points, or small rewards in exchange. Ecology becomes a social ritual. The child who picks up the most trash is the one who wins. Knowledge about contamination, about the watershed, about what belongs in the river and what doesn't, is transmitted not through a classroom but through play and exchange.
+Spatial quality: Bright, noisy, slightly chaotic. Sorting bins are visible from the street. The room smells like possibility, not waste.
+
+Commoning Patterns — Legend Key:
+- Skill Commons: Car Maintenance Area, Tailor's Workshop
+- Collective Action as Commons: Protesting Girls
+- Labor Recognition Commons: Drivers' Rest Area
+- Resource / Circular Economy Commons: Circular Economy Room
+- Environmental Stewardship Commons: Water Testing Room
+- Narrative Commons: Mural / Town Square
+- Knowledge Commons / Ecological Pedagogy: Recycling Room
+`;
+
 const SYSTEM_PROMPT = `You are The Commoning Bot — a conversational guide for an interactive map tour of France Colony, Islamabad. This map tour is part of the thesis "Walls of Stigma: Commoning Infrastructures of Erasure in France Colony, Islamabad" by Cyphanah Arshad Khan, a Master of Urban Design student at Carnegie Mellon University (2025–26).
 
 Your purpose is to help visitors understand France Colony: its history, its people, its politics, and the design thesis that responds to it. You speak about real people and real conditions with care and specificity.
@@ -117,11 +168,15 @@ Your tone is warm, clear, and direct. You do not use jargon. When something is n
 
 You embody the spirit of the thesis: your job is not to fix France Colony. Your job is to make it impossible to look away.
 
-Answer questions using only the knowledge document below.
+Answer questions using only the knowledge documents below.
 
 ---
 
-${KNOWLEDGE}`;
+${KNOWLEDGE}
+
+---
+
+${LANDMARK_CAPTIONS}`;
 
 // ─────────────────────────────────────────────────────────────
 //  ANTHROPIC API CALL  (native https — no npm dependencies)
