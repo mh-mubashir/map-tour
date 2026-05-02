@@ -292,7 +292,6 @@ async function init() {
       loadImg('auntie.PNG'),
     ]);
     auntieImg = aImg;
-    auntieOC  = makeTransparent(aImg);  // white bg → true alpha
 
     mapW = (mImg.naturalWidth  * MAP_SCALE) | 0;
     mapH = (mImg.naturalHeight * MAP_SCALE) | 0;
@@ -445,10 +444,10 @@ function render() {
     ctx.fill();
   }
 
-  // Character — drawn from pre-processed canvas with real alpha (no blend tricks)
+  // Character — drawn as-is from the original PNG (white fill preserved)
   const cw = CHAR_H * (auntieImg.naturalWidth / auntieImg.naturalHeight);
   const sx = char.x - cam.x, sy = char.y - cam.y;
-  ctx.drawImage(auntieOC, sx - cw * 0.5, sy - CHAR_H, cw, CHAR_H);
+  ctx.drawImage(auntieImg, sx - cw * 0.5, sy - CHAR_H, cw, CHAR_H);
 
   // Popup — appears for the nearest landmark within POPUP_DIST
   let nearest = null, nearD = Infinity;
