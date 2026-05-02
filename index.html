@@ -21,25 +21,101 @@
       background: rgba(255, 255, 255, 0.97);
       border: 2px solid #29b6f6;
       border-radius: 10px;
-      padding: 14px 18px;
-      max-width: 260px;
+      padding: 0;
+      width: 290px;
+      max-height: 420px;
       box-shadow: 0 4px 24px rgba(41, 182, 246, 0.25), 0 2px 8px rgba(0,0,0,0.12);
       font-family: Georgia, serif;
       opacity: 0;
       transition: opacity 0.3s ease;
+      overflow: hidden;
+      display: flex; flex-direction: column;
     }
     #popup.show { opacity: 1; }
+    #pp-img {
+      width: 100%; height: 130px;
+      object-fit: cover;
+      display: block;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    #pp-img.hidden { display: none; }
+    #popup-body {
+      padding: 12px 14px 10px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    #popup-body::-webkit-scrollbar { width: 3px; }
+    #popup-body::-webkit-scrollbar-thumb { background: #b3e5fc; border-radius: 2px; }
     #popup h3 {
       color: #0277bd;
-      font-size: 15px;
-      margin-bottom: 8px;
-      padding-bottom: 7px;
+      font-size: 14px;
+      margin-bottom: 4px;
+      padding-bottom: 6px;
       border-bottom: 1px solid #b3e5fc;
     }
-    #popup p {
+    #pp-type {
+      color: #17928a;
+      font-size: 11px;
+      font-style: italic;
+      margin-bottom: 8px;
+    }
+    #pb {
       color: #444;
-      font-size: 13px;
+      font-size: 12px;
       line-height: 1.65;
+      margin-bottom: 6px;
+    }
+    #pp-spatial {
+      color: #666;
+      font-size: 11.5px;
+      font-style: italic;
+      line-height: 1.6;
+      border-top: 1px solid #e8f4fc;
+      padding-top: 6px;
+      margin-top: 2px;
+    }
+    #pp-enter-hint {
+      font-size: 11px;
+      color: #17928a;
+      text-align: center;
+      padding: 6px 0 8px;
+      letter-spacing: 0.2px;
+      flex-shrink: 0;
+      border-top: 1px solid #e0f7f5;
+      background: #f5fffe;
+      cursor: pointer;
+    }
+
+    /* ── Lightbox ── */
+    #lightbox {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.92);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 40;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    #lightbox.open { opacity: 1; pointer-events: all; }
+    #lb-img {
+      max-width: 90vw; max-height: 82vh;
+      object-fit: contain;
+      border-radius: 4px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    }
+    #lb-caption {
+      color: rgba(255,255,255,0.85);
+      font-family: Georgia, serif;
+      font-size: 14px;
+      margin-top: 14px;
+      letter-spacing: 0.2px;
+    }
+    #lb-hint {
+      color: rgba(255,255,255,0.4);
+      font-family: Georgia, serif;
+      font-size: 12px;
+      margin-top: 8px;
     }
 
     /* Arrow-key hint */
@@ -213,10 +289,23 @@
 
 <div id="ui">
   <div id="popup">
-    <h3 id="pt"></h3>
-    <p  id="pb"></p>
+    <img id="pp-img" src="" alt="" class="hidden">
+    <div id="popup-body">
+      <h3 id="pt"></h3>
+      <p id="pp-type"></p>
+      <p id="pb"></p>
+      <p id="pp-spatial"></p>
+    </div>
+    <div id="pp-enter-hint">↵ Enter to enlarge photo</div>
   </div>
   <div id="hint">Arrow keys to walk &nbsp;·&nbsp; Explore the landmarks</div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox">
+  <img id="lb-img" src="" alt="">
+  <p id="lb-caption"></p>
+  <p id="lb-hint">Press Enter or click to close</p>
 </div>
 
 <!-- Chatbot -->
@@ -246,14 +335,62 @@
 //  Replace name + desc with real content when ready.
 // ─────────────────────────────────────────────────────────────
 const LANDMARKS = [
-  { name: "Car Maintenance Area", desc: "Skill Commons / Peer-to-Peer Exchange — France Colony's mechanics are among Islamabad's most reliable, yet the labor that keeps the city's cars running has no street address, no signage, no formal existence. The threshold IS the workplace." },
-  { name: "Protesting Girls", desc: "Collective Action as Commons — In 2004 the wall collapsed and killed a child. The women of France Colony camped at the breach and refused to leave until the government provided electricity. They won. Collectivism here is not a strategy. It is infrastructure." },
-  { name: "Drivers' Rest Area", desc: "Labor Recognition Commons — Drivers and domestic workers who move Islamabad's elite economy wait outside F-7 homes in heat exceeding 40°C. This shaded threshold gives them a place that belongs to no employer. It is public without being surveilled." },
-  { name: "Circular Economy Room", desc: "Resource Commons — Appliances, clothes, and furniture no longer wanted by F-7 households arrive here to be repaired, repurposed, and redistributed. Two communities the wall was built to separate are made economically legible to each other." },
-  { name: "Tailor's Workshop", desc: "Skill Commons / Informal Economy Made Legible — Amna's tailoring skill has always existed here, practiced in homes and invisible to the formal economy. This workshop needs only a sign, a postcode, and a doorbell to become findable." },
-  { name: "Water Analysis & Testing Room", desc: "Environmental Stewardship Commons — France Colony residents live closest to the nullah and are blamed for its condition, despite having no infrastructure to manage it. This room gives them standing: water data collected here reaches the CDA for the first time." },
-  { name: "Children Painting Wall Mural", desc: "Narrative Commons — France Colony has no designated public space. The wall built to erase becomes the surface on which the community writes itself back into visibility. Children painting a mural are not decorating — they are staking a claim." },
-  { name: "Kids & the Recycling Room", desc: "Knowledge Commons / Ecological Pedagogy Through Play — This room turns waste into a game: children bring collected trash and receive rewards in exchange. Ecology becomes a social ritual. Knowledge about the watershed is transmitted through play, not a classroom." },
+  {
+    name: "Car Maintenance Area",
+    type: "Skill Commons / Peer-to-Peer Exchange",
+    desc: "France Colony's mechanics are among Islamabad's most reliable — yet vehicles cannot enter the settlement, and the labor that keeps the city's cars running has no street address, no signage, no formal existence. The wall interface faces both ways: tools and parts stored inside, service rendered at the threshold. The city's dependency on this skill is made visible by placing it exactly at the boundary where it was always happening informally.",
+    spatial: "Spatial quality: The opening in the wall becomes a workshop front. The street is the forecourt. The threshold IS the workplace.",
+    img: "images_landmarks/Landmark%20%281%29.png",
+  },
+  {
+    name: "Protesting Girls",
+    type: "Collective Action as Commons / Governance by Presence",
+    desc: "In 2004 the wall collapsed and killed a child. The women of France Colony camped at the breach and refused to leave until the government provided electricity. They won. This is the only time the state moved — when the wall broke and the community filled the gap with their bodies. Collectivism here is not a strategy. It is infrastructure.",
+    spatial: "Spatial quality: The breach, the opening, the crack — these are not failures of the wall. They are the only negotiating table that has ever worked. The map marks this site as a place where protest became architecture.",
+    img: "images_landmarks/Landmark%20%282%29.png",
+  },
+  {
+    name: "Drivers' Rest Area",
+    type: "Mutual Aid / Labor Recognition Commons",
+    desc: "The drivers, domestic workers, and hired hands who move Islamabad's elite economy spend their working hours waiting outside homes in F-7 in heat that can exceed 40°C. They are essential and invisible. This shaded room on the wall's outer face gives them a place that is neither inside the colony nor on the street — a threshold of dignity. It asks the city to acknowledge the labor it depends on.",
+    spatial: "Spatial quality: A deep overhang, benches, cross-ventilation. The room faces the street but belongs to no employer. It is public without being surveilled.",
+    img: "images_landmarks/Landmark%20%283%29.png",
+  },
+  {
+    name: "Circular Economy Room",
+    type: "Resource Commons / One Man's Trash Is Another's Treasury",
+    desc: "Raw material arrives from F-7 — appliances, clothes, furniture no longer wanted by households whose consumption far exceeds their use. France Colony's residents receive, repair, repurpose, and redistribute. What the map shows as material flow is also a social flow: two communities that the wall was built to separate are made economically legible to each other. The rich neighbor's surplus becomes the foundation of someone else's livelihood.",
+    spatial: "Spatial quality: The room opens generously toward the F-7 street — wide enough to receive a donated fridge, calm enough to have an honest negotiation about pay.",
+    img: "images_landmarks/Landmark%20%284%29.png",
+  },
+  {
+    name: "Tailor's Workshop",
+    type: "Skill Commons / Informal Economy Made Legible",
+    desc: "The tailoring skill has always existed here — practiced in homes, passed between women, invisible to the formal economy because there is no address to find it at. This workshop sits deeper in the settlement, away from the wall, because it belongs to the neighborhood first. It does not need the wall to exist. It needs an address and a door number so that Amna's business can be registered, invoiced, and found by the clients who already know her work.",
+    spatial: "Spatial quality: Fabric spills into the lane. The workshop is not contained — it occupies the neighborhood as it always has. Formalization here is a light touch: a sign, a postcode, a doorbell.",
+    img: "images_landmarks/Landmark%20%285%29.png",
+  },
+  {
+    name: "Water Analysis & Testing Room",
+    type: "Environmental Stewardship Commons / Ecological Knowledge Shared",
+    desc: "The nullah has no custodian with institutional standing. France Colony residents live closest to it, know it most intimately, and are blamed for its condition — despite having no infrastructure to manage it. This room at the ravine's edge gives them standing. Water quality data collected here travels upward to the CDA for the first time. Downstream citizens — who have been receiving contaminated water without knowing its origin — now have a name for the source and a place to direct demands.",
+    spatial: "Spatial quality: A porch that extends over the bank. The water is not behind glass — it is reachable. Testing is tactile. The room is open on the ravine side.",
+    img: "images_landmarks/Landmark%20%286%29.png",
+  },
+  {
+    name: "Children Painting Wall Mural",
+    type: "Narrative Commons / Spatial Claiming Through Culture",
+    desc: "France Colony has no designated public space — no park, no square, no place that signals the neighborhood is allowed to celebrate. The wall, which was built to erase, becomes the surface on which the community writes itself back into visibility. Children painting a mural on it are not decorating. They are staking a claim. This is the town square that was never given — taken instead, through color and presence and the ordinary act of children playing in public.",
+    spatial: "Spatial quality: The square is informal, sun-dappled, slightly uneven underfoot. The mural faces outward toward F-7. The city sees it whether it wants to or not.",
+    img: "images_landmarks/Landmark%20%287%29.png",
+  },
+  {
+    name: "Kids & the Recycling Room",
+    type: "Knowledge Commons / Ecological Pedagogy Through Play",
+    desc: "France Colony has no formal waste infrastructure. Trash accumulates in the nullah because there is nowhere else for it to go. This room turns that problem into a game: children bring collected waste and receive toys, points, or small rewards in exchange. Ecology becomes a social ritual. The child who picks up the most trash is the one who wins. Knowledge about contamination, about the watershed, about what belongs in the river and what doesn't, is transmitted not through a classroom but through play and exchange.",
+    spatial: "Spatial quality: Bright, noisy, slightly chaotic. Sorting bins are visible from the street. The room smells like possibility, not waste.",
+    img: "images_landmarks/Landmark%20%288%29.png",
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -274,9 +411,16 @@ const ZOOM       = 3;     // viewport zoom — increase to go closer, decrease t
 const canvas = document.getElementById('c');
 const ctx    = canvas.getContext('2d');
 
-const popupEl = document.getElementById('popup');
-const ptEl    = document.getElementById('pt');
-const pbEl    = document.getElementById('pb');
+const popupEl     = document.getElementById('popup');
+const ptEl        = document.getElementById('pt');
+const pbEl        = document.getElementById('pb');
+const ppTypeEl    = document.getElementById('pp-type');
+const ppSpatialEl = document.getElementById('pp-spatial');
+const ppImgEl     = document.getElementById('pp-img');
+const ppHintEl    = document.getElementById('pp-enter-hint');
+const lightboxEl  = document.getElementById('lightbox');
+const lbImgEl     = document.getElementById('lb-img');
+const lbCaptionEl = document.getElementById('lb-caption');
 
 let mapOC, pathOverlayOC, auntieImg, auntieOC;
 let pathData, mapW, mapH;
@@ -285,6 +429,8 @@ let char = { x: 0, y: 0 };
 let cam  = { x: 0, y: 0 };
 let keys = {};
 let tick = 0;
+let activeNearestLandmark = null;
+let lightboxOpen = false;
 
 // ─────────────────────────────────────────────────────────────
 //  CANVAS RESIZE
@@ -530,11 +676,41 @@ function hideHint() {
   setTimeout(() => h.remove(), 1400);
 }
 
+function openLightbox(lm) {
+  lbImgEl.src        = lm.info.img;
+  lbCaptionEl.textContent = lm.info.name;
+  lightboxEl.classList.add('open');
+  lightboxOpen = true;
+}
+
+function closeLightbox() {
+  lightboxEl.classList.remove('open');
+  lightboxOpen = false;
+}
+
 window.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (lightboxOpen) {
+      closeLightbox();
+    } else if (activeNearestLandmark && activeNearestLandmark.info.img) {
+      openLightbox(activeNearestLandmark);
+    }
+    return;
+  }
   keys[e.key] = true;
   if (e.key.startsWith('Arrow')) { e.preventDefault(); hideHint(); }
 });
 window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+// Click lightbox backdrop to close
+lightboxEl.addEventListener('click', closeLightbox);
+// Click thumbnail to open
+ppImgEl.addEventListener('click', () => {
+  if (activeNearestLandmark && activeNearestLandmark.info.img) openLightbox(activeNearestLandmark);
+});
+ppHintEl.addEventListener('click', () => {
+  if (activeNearestLandmark && activeNearestLandmark.info.img) openLightbox(activeNearestLandmark);
+});
 
 // ─────────────────────────────────────────────────────────────
 //  UPDATE
@@ -623,15 +799,31 @@ function render() {
   }
 
   if (nearest) {
-    ptEl.textContent = nearest.info.name;
-    pbEl.textContent = nearest.info.desc;
+    // Only update content when the landmark changes
+    if (nearest !== activeNearestLandmark) {
+      activeNearestLandmark = nearest;
+      const info = nearest.info;
+      ptEl.textContent        = info.name;
+      ppTypeEl.textContent    = info.type  || '';
+      pbEl.textContent        = info.desc  || '';
+      ppSpatialEl.textContent = info.spatial || '';
+      if (info.img) {
+        ppImgEl.src = info.img;
+        ppImgEl.classList.remove('hidden');
+        ppHintEl.style.display = '';
+      } else {
+        ppImgEl.classList.add('hidden');
+        ppHintEl.style.display = 'none';
+      }
+    }
     popupEl.classList.add('show');
 
     let px = screenSx + 44, py = screenSy - CHAR_H * ZOOM - 20;
-    if (px + 270 > vw) px = screenSx - 278;
+    if (px + 310 > vw) px = screenSx - 298;
     popupEl.style.left = Math.max(8, px) + 'px';
-    popupEl.style.top  = Math.max(8, Math.min(vh - 160, py)) + 'px';
+    popupEl.style.top  = Math.max(8, Math.min(vh - 200, py)) + 'px';
   } else {
+    activeNearestLandmark = null;
     popupEl.classList.remove('show');
   }
 }
