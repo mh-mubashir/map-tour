@@ -131,7 +131,7 @@ const popupEl = document.getElementById('popup');
 const ptEl    = document.getElementById('pt');
 const pbEl    = document.getElementById('pb');
 
-let mapOC, pathOverlayOC, auntieImg;
+let mapOC, pathOverlayOC, auntieImg, auntieOC;
 let pathData, mapW, mapH;
 let lmSpots = [];
 let char = { x: 0, y: 0 };
@@ -242,6 +242,34 @@ function detectBlobs(imgData, w, h) {
 }
 
 // ─────────────────────────────────────────────────────────────
+//  CHARACTER PRE-PROCESSING
+//  Converts the white background of auntie.PNG to real alpha so
+//  the figure renders correctly without multiply blend artefacts.
+//  Pixels brighter than 230 → transparent.
+//  200-230 brightness → smooth anti-aliased alpha falloff.
+//  Below 200 → fully opaque (ink lines / coloured fill stay solid).
+// ─────────────────────────────────────────────────────────────
+function makeTransparent(img) {
+  const oc = document.createElement('canvas');
+  oc.width = img.naturalWidth; oc.height = img.naturalHeight;
+  const octx = oc.getContext('2d');
+  octx.drawImage(img, 0, 0);
+  const id = octx.getImageData(0, 0, oc.width, oc.height);
+  const d  = id.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const brightness = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+    if (brightness > 230) {
+      d[i+3] = 0;                                           // pure white → transparent
+    } else if (brightness > 200) {
+      d[i+3] = Math.round(255 * (1 - (brightness - 200) / 30)); // soft anti-alias edge
+    }
+    // < 200 → leave alpha unchanged (ink and fill stay solid)
+  }
+  octx.putImageData(id, 0, 0);
+  return oc;
+}
+
+// ─────────────────────────────────────────────────────────────
 //  STARTING POSITION  — bottom-left corner of the orange path
 // ─────────────────────────────────────────────────────────────
 function findStart() {
@@ -264,6 +292,7 @@ async function init() {
       loadImg('auntie.PNG'),
     ]);
     auntieImg = aImg;
+    auntieOC  = makeTransparent(aImg);  // white bg → true alpha
 
     mapW = (mImg.naturalWidth  * MAP_SCALE) | 0;
     mapH = (mImg.naturalHeight * MAP_SCALE) | 0;
@@ -416,13 +445,10 @@ function render() {
     ctx.fill();
   }
 
-  // Character — multiply blend makes white background transparent
+  // Character — drawn from pre-processed canvas with real alpha (no blend tricks)
   const cw = CHAR_H * (auntieImg.naturalWidth / auntieImg.naturalHeight);
   const sx = char.x - cam.x, sy = char.y - cam.y;
-  ctx.save();
-  ctx.globalCompositeOperation = 'multiply';
-  ctx.drawImage(auntieImg, sx - cw * 0.5, sy - CHAR_H, cw, CHAR_H);
-  ctx.restore();
+  ctx.drawImage(auntieOC, sx - cw * 0.5, sy - CHAR_H, cw, CHAR_H);
 
   // Popup — appears for the nearest landmark within POPUP_DIST
   let nearest = null, nearD = Infinity;
