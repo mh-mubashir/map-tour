@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map Tour</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #111; overflow: hidden; }
+    canvas { display: block; }
+
+    /* ── Overlay UI ── */
+    #ui {
+      position: fixed; inset: 0;
+      pointer-events: none;
+    }
+
+    /* Landmark popup card */
+    #popup {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.97);
+      border: 2px solid #29b6f6;
+      border-radius: 10px;
+      padding: 14px 18px;
+      max-width: 260px;
+      box-shadow: 0 4px 24px rgba(41, 182, 246, 0.25), 0 2px 8px rgba(0,0,0,0.12);
+      font-family: Georgia, serif;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    #popup.show { opacity: 1; }
+    #popup h3 {
+      color: #0277bd;
+      font-size: 15px;
+      margin-bottom: 8px;
+      padding-bottom: 7px;
+      border-bottom: 1px solid #b3e5fc;
+    }
+    #popup p {
+      color: #444;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    /* Arrow-key hint */
+    #hint {
+      position: absolute;
+      bottom: 24px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.55);
+      color: #eee;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-family: sans-serif;
+      font-size: 13px;
+      letter-spacing: 0.3px;
+      transition: opacity 1.2s ease;
+      white-space: nowrap;
+    }
+    #hint.gone { opacity: 0; }
+
+    /* ── Loading screen ── */
+    #loading {
+      position: fixed; inset: 0;
+      background: #0d1117;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px;
+      font-family: Georgia, serif;
+      color: #c9d1d9;
+      z-index: 99;
+    }
+    #loading h2 { color: #fff; font-size: 26px; letter-spacing: 1px; }
+    .bar-bg { width: 300px; height: 5px; background: #30363d; border-radius: 3px; }
+    #bar { height: 100%; width: 0%; background: #29b6f6; border-radius: 3px; transition: width 0.25s ease; }
+    #msg { font-size: 13px; color: #8b949e; }
+  </style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div id="ui">
+  <div id="popup">
+    <h3 id="pt"></h3>
+    <p  id="pb"></p>
+  </div>
+  <div id="hint">Arrow keys to walk &nbsp;·&nbsp; Explore the landmarks</div>
+</div>
+
+<div id="loading">
+  <h2>Map Tour</h2>
+  <div class="bar-bg"><div id="bar"></div></div>
+  <div id="msg">Loading…</div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+//  LANDMARK DESCRIPTIONS
+//  8 landmarks, assigned left-to-right across the map.
+//  Replace name + desc with real content when ready.
+// ─────────────────────────────────────────────────────────────
+const LANDMARKS = [
+  { name: "Landmark 1", desc: "Sample description — update with real content." },
+  { name: "Landmark 2", desc: "Sample description — update with real content." },
+  { name: "Landmark 3", desc: "Sample description — update with real content." },
+  { name: "Landmark 4", desc: "Sample description — update with real content." },
+  { name: "Landmark 5", desc: "Sample description — update with real content." },
+  { name: "Landmark 6", desc: "Sample description — update with real content." },
+  { name: "Landmark 7", desc: "Sample description — update with real content." },
+  { name: "Landmark 8", desc: "Sample description — update with real content." },
+];
+
+// ─────────────────────────────────────────────────────────────
+//  CONFIG
+// ─────────────────────────────────────────────────────────────
+const MAP_SCALE  = 0.25;  // render all images at 25% of original resolution
+const SPEED      = 3;     // character px / frame
+const CHAR_H     = 65;    // character render height in px
+const GLOW_DIST  = 150;   // px: landmark starts glowing
+const POPUP_DIST = 110;   // px: popup card appears
+
+// ─────────────────────────────────────────────────────────────
+//  GLOBALS
+// ─────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+
+const popupEl = document.getElementById('popup');
+const ptEl    = document.getElementById('pt');
+const pbEl    = document.getElementById('pb');
+
+let mapOC, pathOverlayOC, auntieImg;
+let pathData, mapW, mapH;
+let lmSpots = [];
+let char = { x: 0, y: 0 };
+let cam  = { x: 0, y: 0 };
+let keys = {};
+let tick = 0;
+
+// ─────────────────────────────────────────────────────────────
+//  CANVAS RESIZE
+// ─────────────────────────────────────────────────────────────
+function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
+resize();
+window.addEventListener('resize', resize);
+
+// ─────────────────────────────────────────────────────────────
+//  LOADING HELPERS
+// ─────────────────────────────────────────────────────────────
+function loadImg(src) {
+  return new Promise((ok, fail) => {
+    const i = new Image();
+    i.onload  = () => ok(i);
+    i.onerror = fail;
+    i.src = src;
+  });
+}
+function setProgress(pct, msg) {
+  document.getElementById('bar').style.width = pct + '%';
+  document.getElementById('msg').textContent = msg;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  PATH COLLISION
+//  path.PNG is orange on white. Detect orange pixels:
+//  high R, medium G, low B, R noticeably greater than G and B.
+// ─────────────────────────────────────────────────────────────
+function onPath(x, y) {
+  const px = x | 0, py = y | 0;
+  if (px < 0 || py < 0 || px >= mapW || py >= mapH) return false;
+  const i = (py * mapW + px) * 4;
+  const r = pathData[i], g = pathData[i+1], b = pathData[i+2], a = pathData[i+3];
+  return a > 50 && r > 160 && g > 60 && b < 160 && r > g + 30 && r > b + 60;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  LANDMARK DETECTION  — BFS connected components on green blobs
+//  landmarks.PNG has green blobs on white.
+// ─────────────────────────────────────────────────────────────
+function detectBlobs(imgData, w, h) {
+  const d   = imgData.data;
+  const vis = new Uint8Array(w * h);
+  const blobs = [];
+
+  const isGreen = n => {
+    const r = d[n*4], g = d[n*4+1], b = d[n*4+2], a = d[n*4+3];
+    return a > 50 && g > 100 && g > r * 1.15 && g > b * 1.1;
+  };
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const node = y * w + x;
+      if (vis[node]) continue;
+      vis[node] = 1;
+      if (!isGreen(node)) continue;
+
+      // BFS
+      const q = [node];
+      let qi = 0, sx = 0, sy = 0, cnt = 0;
+      let x0 = w, x1 = 0, y0 = h, y1 = 0;
+
+      while (qi < q.length) {
+        const n  = q[qi++];
+        const nx = n % w, ny = (n / w) | 0;
+        sx += nx; sy += ny; cnt++;
+        if (nx < x0) x0 = nx; if (nx > x1) x1 = nx;
+        if (ny < y0) y0 = ny; if (ny > y1) y1 = ny;
+
+        const nbrs = [[nx-1,ny],[nx+1,ny],[nx,ny-1],[nx,ny+1]];
+        for (const [bx, by] of nbrs) {
+          if (bx < 0 || by < 0 || bx >= w || by >= h) continue;
+          const nb = by * w + bx;
+          if (vis[nb]) continue;
+          vis[nb] = 1;
+          if (isGreen(nb)) q.push(nb);
+        }
+      }
+
+      if (cnt > 8) {
+        blobs.push({
+          cx: sx / cnt,
+          cy: sy / cnt,
+          r:  Math.max(x1 - x0, y1 - y0) * 0.6 + 12,
+        });
+      }
+    }
+  }
+  return blobs;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  STARTING POSITION  — bottom-left corner of the orange path
+// ─────────────────────────────────────────────────────────────
+function findStart() {
+  for (let y = mapH - 1; y >= 0; y--)
+    for (let x = 0; x < mapW; x++)
+      if (onPath(x, y)) return { x, y };
+  return { x: (mapW * 0.5) | 0, y: (mapH * 0.7) | 0 };
+}
+
+// ─────────────────────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    setProgress(5, 'Loading images…');
+    const [mImg, pImg, lImg, aImg] = await Promise.all([
+      loadImg('map.png'),
+      loadImg('path.PNG'),
+      loadImg('landmarks.PNG'),
+      loadImg('auntie.PNG'),
+    ]);
+    auntieImg = aImg;
+
+    mapW = (mImg.naturalWidth  * MAP_SCALE) | 0;
+    mapH = (mImg.naturalHeight * MAP_SCALE) | 0;
+
+    // Pre-render scaled map to offscreen canvas
+    setProgress(20, 'Rendering map…');
+    mapOC = document.createElement('canvas');
+    mapOC.width = mapW; mapOC.height = mapH;
+    mapOC.getContext('2d').drawImage(mImg, 0, 0, mapW, mapH);
+
+    // Read path pixel data for collision
+    setProgress(40, 'Reading path…');
+    const pOC  = document.createElement('canvas');
+    pOC.width  = mapW; pOC.height = mapH;
+    const pCtx = pOC.getContext('2d');
+    pCtx.drawImage(pImg, 0, 0, mapW, mapH);
+    pathData = pCtx.getImageData(0, 0, mapW, mapH).data;
+
+    // Build a semi-transparent light-red overlay of the walkable path area
+    pathOverlayOC = document.createElement('canvas');
+    pathOverlayOC.width = mapW; pathOverlayOC.height = mapH;
+    const poCtx = pathOverlayOC.getContext('2d');
+    const overlayImg = poCtx.createImageData(mapW, mapH);
+    const od = overlayImg.data;
+    for (let i = 0; i < pathData.length; i += 4) {
+      const r = pathData[i], g = pathData[i+1], b = pathData[i+2], a = pathData[i+3];
+      if (a > 50 && r > 160 && g > 60 && b < 160 && r > g + 30 && r > b + 60) {
+        od[i]   = 220;  // R
+        od[i+1] = 60;   // G
+        od[i+2] = 60;   // B
+        od[i+3] = 100;  // A — semi-transparent (~40%)
+      }
+    }
+    poCtx.putImageData(overlayImg, 0, 0);
+
+    // Detect landmark blob centroids
+    setProgress(65, 'Locating landmarks…');
+    const lOC  = document.createElement('canvas');
+    lOC.width  = mapW; lOC.height = mapH;
+    const lCtx = lOC.getContext('2d');
+    lCtx.drawImage(lImg, 0, 0, mapW, mapH);
+    const blobs = detectBlobs(lCtx.getImageData(0, 0, mapW, mapH), mapW, mapH);
+
+    // Sort left-to-right so indices match landmark order on the map
+    blobs.sort((a, b) => a.cx - b.cx);
+
+    lmSpots = blobs.slice(0, 8).map((b, i) => ({
+      x: b.cx, y: b.cy, r: b.r,
+      info: LANDMARKS[i],
+    }));
+
+    console.log(`Detected ${blobs.length} landmark blobs:`,
+      lmSpots.map(l => `(${l.x|0}, ${l.y|0})`).join('  '));
+
+    // Place character at bottom-left of path
+    setProgress(90, 'Placing character…');
+    char = findStart();
+    console.log('Start position:', char);
+
+    setProgress(100, 'Ready!');
+    setTimeout(() => {
+      document.getElementById('loading').remove();
+      requestAnimationFrame(loop);
+    }, 300);
+
+  } catch (e) {
+    console.error(e);
+    document.getElementById('msg').textContent =
+      '⚠  Failed to load — run: node serve.js  then open http://localhost:8080';
+    document.getElementById('msg').style.color = '#f97316';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  INPUT
+// ─────────────────────────────────────────────────────────────
+let hintGone = false;
+function hideHint() {
+  if (hintGone) return;
+  hintGone = true;
+  const h = document.getElementById('hint');
+  if (!h) return;
+  h.classList.add('gone');
+  setTimeout(() => h.remove(), 1400);
+}
+
+window.addEventListener('keydown', e => {
+  keys[e.key] = true;
+  if (e.key.startsWith('Arrow')) { e.preventDefault(); hideHint(); }
+});
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+// ─────────────────────────────────────────────────────────────
+//  UPDATE
+// ─────────────────────────────────────────────────────────────
+function update() {
+  let dx = 0, dy = 0;
+  if (keys['ArrowLeft'])  dx -= SPEED;
+  if (keys['ArrowRight']) dx += SPEED;
+  if (keys['ArrowUp'])    dy -= SPEED;
+  if (keys['ArrowDown'])  dy += SPEED;
+
+  // Normalise diagonal so speed is consistent
+  if (dx && dy) { dx *= 0.707; dy *= 0.707; }
+
+  if (dx || dy) {
+    const nx = char.x + dx, ny = char.y + dy;
+    if      (onPath(nx, ny))       { char.x = nx; char.y = ny; }
+    else if (onPath(nx, char.y))   { char.x = nx; }
+    else if (onPath(char.x, ny))   { char.y = ny; }
+  }
+
+  // Camera centres on character, clamped to map bounds
+  const vw = canvas.width, vh = canvas.height;
+  cam.x = Math.max(0, Math.min(mapW - vw, char.x - vw * 0.5));
+  cam.y = Math.max(0, Math.min(mapH - vh, char.y - vh * 0.5));
+}
+
+// ─────────────────────────────────────────────────────────────
+//  RENDER
+// ─────────────────────────────────────────────────────────────
+function render() {
+  const vw = canvas.width, vh = canvas.height;
+  ctx.clearRect(0, 0, vw, vh);
+
+  // Map (draw only the visible viewport slice)
+  ctx.drawImage(mapOC, cam.x, cam.y, vw, vh, 0, 0, vw, vh);
+
+  // Path overlay — light red tint shows the walkable area
+  ctx.drawImage(pathOverlayOC, cam.x, cam.y, vw, vh, 0, 0, vw, vh);
+
+  // Landmark glows — pulsing light-blue radial gradient
+  const pulse = (Math.sin(tick * 0.1) + 1) * 0.5; // 0 → 1, ~60-frame cycle
+  for (const lm of lmSpots) {
+    const dist = Math.hypot(char.x - lm.x, char.y - lm.y);
+    if (dist > GLOW_DIST * 2) continue;
+
+    const nearness = Math.max(0, 1 - dist / (GLOW_DIST * 2));
+    const sx = lm.x - cam.x, sy = lm.y - cam.y;
+    const outerR = lm.r * 3 + pulse * 10;
+
+    const grad = ctx.createRadialGradient(sx, sy, lm.r * 0.2, sx, sy, outerR);
+    grad.addColorStop(0, `rgba(41, 182, 246, ${(0.6 + pulse * 0.35) * nearness})`);
+    grad.addColorStop(0.5, `rgba(79, 195, 247, ${0.3 * nearness})`);
+    grad.addColorStop(1,   'rgba(41, 182, 246, 0)');
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(sx, sy, outerR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Character — multiply blend makes white background transparent
+  const cw = CHAR_H * (auntieImg.naturalWidth / auntieImg.naturalHeight);
+  const sx = char.x - cam.x, sy = char.y - cam.y;
+  ctx.save();
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.drawImage(auntieImg, sx - cw * 0.5, sy - CHAR_H, cw, CHAR_H);
+  ctx.restore();
+
+  // Popup — appears for the nearest landmark within POPUP_DIST
+  let nearest = null, nearD = Infinity;
+  for (const lm of lmSpots) {
+    const d = Math.hypot(char.x - lm.x, char.y - lm.y);
+    if (d < POPUP_DIST && d < nearD) { nearD = d; nearest = lm; }
+  }
+
+  if (nearest) {
+    ptEl.textContent = nearest.info.name;
+    pbEl.textContent = nearest.info.desc;
+    popupEl.classList.add('show');
+
+    // Position popup above-right of character; flip left if it would clip edge
+    let px = sx + 44, py = sy - CHAR_H - 20;
+    if (px + 270 > vw) px = sx - 278;
+    popupEl.style.left = Math.max(8, px) + 'px';
+    popupEl.style.top  = Math.max(8, Math.min(vh - 160, py)) + 'px';
+  } else {
+    popupEl.classList.remove('show');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  LOOP
+// ─────────────────────────────────────────────────────────────
+function loop() {
+  tick++;
+  update();
+  render();
+  requestAnimationFrame(loop);
+}
+
+init();
+</script>
+</body>
+</html>
