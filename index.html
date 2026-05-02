@@ -407,7 +407,6 @@ const ctx    = canvas.getContext('2d');
 const popupEl     = document.getElementById('popup');
 const ptEl        = document.getElementById('pt');
 const pbEl        = document.getElementById('pb');
-const ppTypeEl    = document.getElementById('pp-type');
 const ppSpatialEl = document.getElementById('pp-spatial');
 const ppImgEl     = document.getElementById('pp-img');
 const ppHintEl    = document.getElementById('pp-enter-hint');
@@ -797,7 +796,6 @@ function render() {
       activeNearestLandmark = nearest;
       const info = nearest.info;
       ptEl.textContent        = info.name;
-      ppTypeEl.textContent    = '';
       pbEl.textContent        = info.desc  || '';
       ppSpatialEl.textContent = info.spatial || '';
       if (info.img) {
