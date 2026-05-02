@@ -120,6 +120,7 @@ const CHAR_H     = 65;    // character render height in px
 const GLOW_DIST  = 150;   // px: landmark starts glowing
 const POPUP_DIST = 110;   // px: popup card appears
 const TOLERANCE  = 4;     // px: soft edge — character can stray this far off exact path pixels
+const ZOOM       = 2;     // viewport zoom — increase to go closer, decrease to see more of the map
 
 // ─────────────────────────────────────────────────────────────
 //  GLOBALS
@@ -405,9 +406,11 @@ function update() {
   }
 
   // Camera centres on character, clamped to map bounds
+  // sw/sh is how many map pixels the viewport covers at the current zoom
   const vw = canvas.width, vh = canvas.height;
-  cam.x = Math.max(0, Math.min(mapW - vw, char.x - vw * 0.5));
-  cam.y = Math.max(0, Math.min(mapH - vh, char.y - vh * 0.5));
+  const sw = vw / ZOOM, sh = vh / ZOOM;
+  cam.x = Math.max(0, Math.min(mapW - sw, char.x - sw * 0.5));
+  cam.y = Math.max(0, Math.min(mapH - sh, char.y - sh * 0.5));
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -415,16 +418,22 @@ function update() {
 // ─────────────────────────────────────────────────────────────
 function render() {
   const vw = canvas.width, vh = canvas.height;
+  const sw = vw / ZOOM, sh = vh / ZOOM; // map-space size of the visible window
+
   ctx.clearRect(0, 0, vw, vh);
 
-  // Map (draw only the visible viewport slice)
-  ctx.drawImage(mapOC, cam.x, cam.y, vw, vh, 0, 0, vw, vh);
+  // Apply zoom: all canvas drawing uses map-space coords; scale handles screen size
+  ctx.save();
+  ctx.scale(ZOOM, ZOOM);
 
-  // Path overlay — light red tint shows the walkable area
-  ctx.drawImage(pathOverlayOC, cam.x, cam.y, vw, vh, 0, 0, vw, vh);
+  // Map — sample sw×sh map pixels, draw into sw×sh pre-transform (= vw×vh on screen)
+  ctx.drawImage(mapOC, cam.x, cam.y, sw, sh, 0, 0, sw, sh);
 
-  // Landmark glows — pulsing light-blue radial gradient
-  const pulse = (Math.sin(tick * 0.1) + 1) * 0.5; // 0 → 1, ~60-frame cycle
+  // Path overlay
+  ctx.drawImage(pathOverlayOC, cam.x, cam.y, sw, sh, 0, 0, sw, sh);
+
+  // Landmark glows — positions in map-space, scale does the rest
+  const pulse = (Math.sin(tick * 0.1) + 1) * 0.5;
   for (const lm of lmSpots) {
     const dist = Math.hypot(char.x - lm.x, char.y - lm.y);
     if (dist > GLOW_DIST * 2) continue;
@@ -444,12 +453,15 @@ function render() {
     ctx.fill();
   }
 
-  // Character — drawn as-is from the original PNG (white fill preserved)
+  // Character
   const cw = CHAR_H * (auntieImg.naturalWidth / auntieImg.naturalHeight);
   const sx = char.x - cam.x, sy = char.y - cam.y;
   ctx.drawImage(auntieImg, sx - cw * 0.5, sy - CHAR_H, cw, CHAR_H);
 
-  // Popup — appears for the nearest landmark within POPUP_DIST
+  ctx.restore(); // end zoom transform
+
+  // Popup — HTML element, so needs actual screen coordinates (map-space × ZOOM)
+  const screenSx = sx * ZOOM, screenSy = sy * ZOOM;
   let nearest = null, nearD = Infinity;
   for (const lm of lmSpots) {
     const d = Math.hypot(char.x - lm.x, char.y - lm.y);
@@ -461,9 +473,8 @@ function render() {
     pbEl.textContent = nearest.info.desc;
     popupEl.classList.add('show');
 
-    // Position popup above-right of character; flip left if it would clip edge
-    let px = sx + 44, py = sy - CHAR_H - 20;
-    if (px + 270 > vw) px = sx - 278;
+    let px = screenSx + 44, py = screenSy - CHAR_H * ZOOM - 20;
+    if (px + 270 > vw) px = screenSx - 278;
     popupEl.style.left = Math.max(8, px) + 'px';
     popupEl.style.top  = Math.max(8, Math.min(vh - 160, py)) + 'px';
   } else {
